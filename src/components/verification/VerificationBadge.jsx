@@ -38,10 +38,27 @@ function VerificationBadge({ status, verified, compact = false, showLabel = true
         title="Evidence submitted and awaiting review"
       >
         <CircleAlert size={compact ? 13 : 15} className="text-amber-600 shrink-0 animate-pulse" />
-        {showLabel && (compact ? 'Pending' : 'Pending / Needs evidence')}
+        {showLabel && (compact ? 'Pending' : 'Pending Review')}
       </span>
     )
   }
+
+  if (currentStatus === 'rejected') {
+    return (
+      <span
+        className={`inline-flex items-center gap-1.5 font-semibold transition-all ${
+          compact
+            ? 'text-[11px] text-rose-700'
+            : 'rounded-full border border-rose-200 bg-rose-50/90 px-2.5 py-1 text-xs text-rose-800 shadow-xs'
+        }`}
+        title="Evidence returned for revision"
+      >
+        <CircleAlert size={compact ? 13 : 15} className="text-rose-600 shrink-0" />
+        {showLabel && (compact ? 'Rejected' : '✕ Returned / Revision')}
+      </span>
+    )
+  }
+
 
   return (
     <span

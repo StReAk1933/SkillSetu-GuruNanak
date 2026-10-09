@@ -10,14 +10,16 @@ function VerificationFilterBar({
   categories,
   sortOption,
   onSortChange,
-  statusCounts = { all: 0, verified: 0, pending: 0, unverified: 0 },
+  statusCounts = { all: 0, verified: 0, pending: 0, rejected: 0, unverified: 0 },
 }) {
   const statusTabs = [
     { id: 'all', label: 'All Skills', count: statusCounts.all },
     { id: 'verified', label: '✓ Verified', count: statusCounts.verified },
     { id: 'pending', label: 'Pending Review', count: statusCounts.pending },
+    { id: 'rejected', label: 'Returned for Revision', count: statusCounts.rejected || 0 },
     { id: 'unverified', label: 'Unverified', count: statusCounts.unverified },
   ]
+
 
   return (
     <div className="space-y-3">

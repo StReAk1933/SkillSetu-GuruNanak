@@ -1,21 +1,47 @@
+import { useState } from 'react'
 import {
-  Award,
-  Calendar,
   CheckCircle2,
   Clock,
-  ExternalLink,
   History,
+  RotateCcw,
   ShieldAlert,
   UserCheck,
   X,
+  XCircle,
 } from 'lucide-react'
+
+
 import VerificationBadge from './VerificationBadge'
 
-function VerificationDetail({ competency, employee, onClose, onQuickVerify }) {
+function VerificationDetail({
+  competency,
+  employee,
+  onClose,
+  onQuickVerify,
+  onApprove,
+  onReject,
+  onAddEvidence,
+  isReviewer = true,
+}) {
+  const [rejecting, setRejecting] = useState(false)
+  const [rejectReason, setRejectReason] = useState('')
+
   if (!competency) return null
 
-  const { skill, category, level, status, verified, evidence } = competency
+  const { skill, level, status, verified, evidence } = competency
   const isVerified = status === 'verified' || verified === true
+  const isPending = status === 'pending'
+  const isRejected = status === 'rejected'
+
+  const handleConfirmReject = () => {
+    if (!rejectReason.trim()) {
+      alert('Please provide a reason for returning this evidence for revision.')
+      return
+    }
+    onReject?.(competency, rejectReason)
+    setRejecting(false)
+    setRejectReason('')
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -55,7 +81,7 @@ function VerificationDetail({ competency, employee, onClose, onQuickVerify }) {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="grid size-12 shrink-0 place-items-center rounded-xl bg-slate-900 text-sm font-bold text-white">
-                  {employee?.avatar || employee?.employeeName?.substring(0, 2).toUpperCase() || 'EM'}
+                  {employee?.avatar || employee?.employeeName?.substring(0, 2).toUpperCase() || employee?.name?.substring(0, 2).toUpperCase() || 'EM'}
                 </div>
                 <div>
                   <h4 className="text-base font-bold text-slate-900">{employee?.employeeName || employee?.name}</h4>
@@ -66,63 +92,65 @@ function VerificationDetail({ competency, employee, onClose, onQuickVerify }) {
               </div>
               <VerificationBadge status={status} verified={verified} />
             </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4 sm:grid-cols-3">
-              <div className="rounded-xl bg-slate-50 p-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Category</p>
-                <p className="mt-1 text-xs font-semibold text-slate-800">{category || 'General'}</p>
-              </div>
-              <div className="rounded-xl bg-slate-50 p-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Proficiency</p>
-                <p className="mt-1 text-xs font-bold text-emerald-700">Level {level} of 5</p>
-              </div>
-              <div className="col-span-2 rounded-xl bg-slate-50 p-3 sm:col-span-1">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Verification Trust</p>
-                <p className="mt-1 text-xs font-bold text-slate-800">
-                  {isVerified ? `${evidence?.verificationScore || 95}% Confidence` : 'Pending Proof'}
-                </p>
-              </div>
-            </div>
           </section>
 
-          {/* Evidence Dossier Section */}
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="grid size-7 place-items-center rounded-lg bg-emerald-50 text-emerald-700">
-                <Award size={16} />
-              </span>
-              <h4 className="text-sm font-bold text-slate-900">Primary Supporting Evidence</h4>
+          {/* Pending Status Alert */}
+          {isPending && (
+            <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-900">
+              <div className="flex items-center gap-2 font-bold text-amber-800">
+                <Clock size={16} />
+                <span>Pending Reviewer Action</span>
+              </div>
+              <p className="mt-1 leading-5 text-amber-800">
+                Evidence has been submitted and is currently in the review queue. This competency will not count toward verified project matching score until approved by an authorized reviewer.
+              </p>
             </div>
+          )}
+
+          {/* Rejected Status Alert */}
+          {isRejected && (
+            <div className="rounded-2xl border border-rose-300 bg-rose-50 p-4 text-xs text-rose-900">
+              <div className="flex items-center gap-2 font-bold text-rose-800">
+                <XCircle size={16} />
+                <span>Verification Returned for Revision</span>
+              </div>
+              <p className="mt-1 text-xs font-semibold text-rose-800">
+                Reason: &ldquo;{evidence?.reviewReason || 'Additional proof documentation required'}&rdquo;
+              </p>
+              {evidence?.reviewedBy && (
+                <p className="mt-1 text-[11px] text-rose-600">
+                  Reviewed by {evidence.reviewedBy} on {evidence.reviewedAt || 'recently'}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Evidence Details Section */}
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">
+              Submitted Verification Artifacts & Source
+            </h4>
 
             {evidence ? (
               <div className="space-y-4">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Evidence Type</p>
-                    <p className="mt-1 text-xs font-bold text-slate-900">{evidence.type}</p>
+                <div className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3.5 text-xs sm:grid-cols-3">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Proof Type</span>
+                    <p className="font-semibold text-slate-900 mt-0.5">{evidence.type || 'Project evidence'}</p>
                   </div>
-                  <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Verification Date</p>
-                    <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-slate-900">
-                      <Calendar size={13} className="text-slate-400" />
-                      {evidence.date || 'N/A'}
-                    </p>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Date</span>
+                    <p className="font-semibold text-slate-900 mt-0.5">{evidence.date || 'N/A'}</p>
                   </div>
-                  <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Verification Source</p>
-                    <p className="mt-1 text-xs font-semibold text-slate-900">{evidence.source || 'Direct Assessment'}</p>
-                  </div>
-                  <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Credential / Ref ID</p>
-                    <p className="mt-1 font-mono text-[11px] font-semibold text-emerald-800">
-                      {evidence.credentialId || 'N/A'}
-                    </p>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Score</span>
+                    <p className="font-bold text-emerald-700 mt-0.5">{evidence.verificationScore ? `${evidence.verificationScore}%` : 'N/A'}</p>
                   </div>
                 </div>
 
                 {evidence.issuer && (
-                  <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3 text-xs">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-xs">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                       Issuing / Evaluating Authority
                     </p>
                     <p className="mt-1 font-semibold text-slate-900">{evidence.issuer}</p>
@@ -142,29 +170,8 @@ function VerificationDetail({ competency, employee, onClose, onQuickVerify }) {
                   <div className="flex items-center gap-2 rounded-xl bg-slate-100 px-3.5 py-2.5 text-xs text-slate-700">
                     <UserCheck size={16} className="text-emerald-600 shrink-0" />
                     <span>
-                      Verified by <strong className="text-slate-900">{evidence.verifiedBy}</strong>
+                      Reviewer: <strong className="text-slate-900">{evidence.verifiedBy}</strong>
                     </span>
-                  </div>
-                )}
-
-                {/* Evidence Artifacts */}
-                {evidence.artifacts && evidence.artifacts.length > 0 && (
-                  <div className="border-t border-slate-100 pt-3">
-                    <p className="text-xs font-bold text-slate-900 mb-2">Attached Proof Artifacts</p>
-                    <div className="space-y-1.5">
-                      {evidence.artifacts.map((art, i) => (
-                        <div
-                          key={i}
-                          className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs"
-                        >
-                          <span className="font-medium text-slate-800">{art.name}</span>
-                          <span className="inline-flex items-center gap-1 font-mono text-[11px] text-emerald-700">
-                            <ExternalLink size={12} />
-                            Verified Artifact
-                          </span>
-                        </div>
-                      ))}
-                    </div>
                   </div>
                 )}
               </div>
@@ -196,6 +203,9 @@ function VerificationDetail({ competency, employee, onClose, onQuickVerify }) {
                       <CheckCircle2 size={10} className="text-white" />
                     </span>
                     <p className="text-xs font-bold text-slate-900">{event.action}</p>
+                    {event.reason && (
+                      <p className="text-[11px] italic text-slate-500 mt-0.5">&ldquo;{event.reason}&rdquo;</p>
+                    )}
                     <div className="mt-0.5 flex items-center gap-3 text-[11px] text-slate-500">
                       <span className="inline-flex items-center gap-1">
                         <Clock size={11} className="text-slate-400" />
@@ -211,19 +221,101 @@ function VerificationDetail({ competency, employee, onClose, onQuickVerify }) {
             )}
           </section>
 
-          {/* Quick Verify Simulation Action if not verified */}
-          {!isVerified && onQuickVerify && (
+          {/* Reviewer Actions for Pending Evidence */}
+          {isPending && isReviewer && (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5 space-y-3">
+              <div>
+                <h4 className="text-sm font-bold text-slate-900">Reviewer Decision</h4>
+                <p className="text-xs text-slate-600">
+                  Approve to verify this competency or reject with an explanation for revision.
+                </p>
+              </div>
+
+              {!rejecting ? (
+                <div className="flex items-center gap-2 pt-2">
+                  <button
+                    onClick={() => onApprove?.(competency)}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-xs transition hover:bg-emerald-700"
+                  >
+                    <CheckCircle2 size={15} />
+                    <span>Approve & Verify Competency</span>
+                  </button>
+                  <button
+                    onClick={() => setRejecting(true)}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-xs font-bold text-rose-700 shadow-xs transition hover:bg-rose-50"
+                  >
+                    <XCircle size={15} />
+                    <span>Reject / Request Revision</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2 rounded-xl border border-rose-200 bg-white p-3.5">
+                  <label className="block text-xs font-bold text-rose-900">
+                    Rejection Reason (Required)
+                  </label>
+                  <input
+                    type="text"
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    placeholder="e.g. Test coverage insufficient or certificate credential unverified"
+                    className="w-full rounded-lg border border-slate-200 p-2 text-xs text-slate-900 focus:border-rose-400 focus:outline-none focus:ring-1 focus:ring-rose-400"
+                  />
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      onClick={handleConfirmReject}
+                      className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-700"
+                    >
+                      Confirm Rejection
+                    </button>
+                    <button
+                      onClick={() => {
+                        setRejecting(false)
+                        setRejectReason('')
+                      }}
+                      className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Action if Rejected: Allow Resubmission */}
+          {isRejected && onAddEvidence && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">Resubmit Evidence</h4>
+                  <p className="text-xs text-slate-500">
+                    Upload revised proof or test score to return this competency to Pending Review.
+                  </p>
+                </div>
+                <button
+                  onClick={() => onAddEvidence(competency)}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-slate-800 shrink-0"
+                >
+                  <RotateCcw size={14} />
+                  <span>Resubmit Evidence</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Quick Verify Simulation Action if unverified and reviewer */}
+          {!isVerified && !isPending && !isRejected && onQuickVerify && isReviewer && (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h4 className="text-sm font-bold text-emerald-950">Simulate Verification Signoff</h4>
+                  <h4 className="text-sm font-bold text-emerald-950">Attestation Signoff (Reviewer)</h4>
                   <p className="text-xs text-emerald-700">
-                    Approve this competency and issue a digital verification record for testing.
+                    Directly attest and verify this competency with official reviewer signature.
                   </p>
                 </div>
                 <button
                   onClick={() => onQuickVerify(competency)}
-                  className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700 shrink-0"
+                  className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-emerald-700 shrink-0"
                 >
                   Sign & Verify ✓
                 </button>

@@ -1,4 +1,5 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
+import { useAppContext } from './context/useAppContext'
 import AppShell from './components/layout/AppShell'
 import ProjectMatchingPage from './pages/ProjectMatchingPage'
 import VerificationPage from './pages/VerificationPage'
@@ -10,9 +11,11 @@ import EmployeeProjectsPage from './pages/EmployeeProjectsPage'
 import EmployeeCompetencyPage from './pages/EmployeeCompetencyPage'
 import EmployeeVerificationPage from './pages/EmployeeVerificationPage'
 
+import SkillSetuAiAssistant from './components/assistant/SkillSetuAiAssistant'
+
 function App() {
-  const [activeTab, setActiveTab] = useState('Verification')
-  const [workspace, setWorkspace] = useState('admin')
+  const { workspace, setWorkspace, currentEmployeeId } = useAppContext()
+  const [activeTab, setActiveTab] = useState(workspace === 'employee' ? 'Dashboard' : 'Verification')
 
   const handleWorkspaceChange = (nextWorkspace) => {
     setWorkspace(nextWorkspace)
@@ -39,12 +42,24 @@ function App() {
       : activeTab === 'Verification'
         ? <EmployeeVerificationPage />
     : activeTab === 'Learning'
-      ? <EmployeeLearningPage />
+      ? <EmployeeLearningPage key={currentEmployeeId} />
       : activeTab === 'Projects'
         ? <EmployeeProjectsPage />
         : null
 
-  return <AppShell activeTab={activeTab} onTabChange={setActiveTab} workspace={workspace} onWorkspaceChange={handleWorkspaceChange}>{workspace === 'employee' && employeePage ? employeePage : renderPage()}</AppShell>
+  return (
+    <>
+      <AppShell
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        workspace={workspace}
+        onWorkspaceChange={handleWorkspaceChange}
+      >
+        {workspace === 'employee' && employeePage ? employeePage : renderPage()}
+      </AppShell>
+      <SkillSetuAiAssistant />
+    </>
+  )
 }
 
 export default App
