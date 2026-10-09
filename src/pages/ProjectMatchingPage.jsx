@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { RotateCcw, Search, SlidersHorizontal, X } from 'lucide-react'
-import { employees } from '../data/employees'
-import { projects } from '../data/projects'
+import { useAppContext } from '../context/useAppContext'
 import { rankEmployees } from '../utils/matching'
 import EmployeeDetailPanel from '../components/matching/EmployeeDetailPanel'
 import EmployeeRanking from '../components/matching/EmployeeRanking'
@@ -10,14 +9,16 @@ import ProjectList from '../components/projects/ProjectList'
 import ProjectRequirements from '../components/projects/ProjectRequirements'
 
 function ProjectMatchingPage() {
-  const [selectedProjectId, setSelectedProjectId] = useState(projects[0].id)
+  const { employees, projects } = useAppContext()
+  const [selectedProjectId, setSelectedProjectId] = useState(projects[0]?.id || 'project-citizen-dashboard')
   const [search, setSearch] = useState('')
   const [availability, setAvailability] = useState('all')
   const [minimumScore, setMinimumScore] = useState(0)
   const [selectedMatch, setSelectedMatch] = useState(null)
   const selectedProject = projects.find((project) => project.id === selectedProjectId) ?? projects[0]
 
-  const rankedMatches = useMemo(() => rankEmployees(employees, selectedProject), [selectedProject])
+  const rankedMatches = useMemo(() => rankEmployees(employees, selectedProject), [employees, selectedProject])
+
   const filteredMatches = useMemo(() => rankedMatches.filter((match) => {
     const query = search.trim().toLowerCase()
     const matchesSearch = !query || `${match.employee.name} ${match.employee.role} ${match.employee.department}`.toLowerCase().includes(query)

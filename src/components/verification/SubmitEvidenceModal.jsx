@@ -6,7 +6,6 @@ function SubmitEvidenceModal({ competency, employee, onClose, onSubmitEvidence }
   const [source, setSource] = useState('Project Repository')
   const [issuer, setIssuer] = useState('')
   const [credentialId, setCredentialId] = useState('')
-  const [verifiedBy, setVerifiedBy] = useState('Lead Reviewer')
   const [verificationScore, setVerificationScore] = useState(90)
   const [summary, setSummary] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -24,7 +23,7 @@ function SubmitEvidenceModal({ competency, employee, onClose, onSubmitEvidence }
       issuer: issuer || `${evidenceType} Registry`,
       credentialId: credentialId || `VERIF-${Math.floor(10000 + Math.random() * 90000)}`,
       validUntil: 'Permanent',
-      verifiedBy: verifiedBy || 'Auditor',
+      verifiedBy: 'Pending Reviewer Signoff',
       verificationScore: Number(verificationScore) || 90,
       summary:
         summary ||
@@ -37,10 +36,11 @@ function SubmitEvidenceModal({ competency, employee, onClose, onSubmitEvidence }
         },
       ],
       auditTrail: [
+        ...(competency.evidence?.auditTrail || []),
         {
           date: `${new Date().toISOString().split('T')[0]} ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
-          action: 'Evidence Record Submitted and Validated',
-          actor: verifiedBy || 'Verification Officer',
+          action: 'Evidence Record Submitted for Review',
+          actor: employee?.name || employee?.employeeName || 'Employee',
         },
       ],
     }
@@ -49,8 +49,9 @@ function SubmitEvidenceModal({ competency, employee, onClose, onSubmitEvidence }
       onSubmitEvidence(competency.skillId, newEvidence)
       setIsSubmitting(false)
       onClose()
-    }, 300)
+    }, 200)
   }
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -162,17 +163,13 @@ function SubmitEvidenceModal({ competency, employee, onClose, onSubmitEvidence }
             </div>
           </div>
 
-          <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
-              Verified By (Auditor / Lead)
-            </label>
-            <input
-              type="text"
-              value={verifiedBy}
-              onChange={(e) => setVerifiedBy(e.target.value)}
-              placeholder="e.g. Principal Architect / Evaluation Board"
-              className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-            />
+          <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-800">
+            <p className="font-bold flex items-center gap-1.5">
+              <span>⚠️</span> Verification Lifecycle Notice:
+            </p>
+            <p className="mt-1 text-[11px] leading-4 text-amber-900">
+              Submitting evidence transitions this competency to <strong>Pending Review</strong>. A reviewer must inspect and approve it before it becomes verified and influences project matching.
+            </p>
           </div>
 
           <div>
@@ -202,15 +199,16 @@ function SubmitEvidenceModal({ competency, employee, onClose, onSubmitEvidence }
               className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white shadow-xs transition hover:bg-emerald-700 disabled:opacity-50"
             >
               {isSubmitting ? (
-                <span>Recording...</span>
+                <span>Submitting for Review...</span>
               ) : (
                 <>
                   <ShieldCheck size={15} />
-                  <span>Attest & Verify Competency</span>
+                  <span>Submit for Verification Review</span>
                 </>
               )}
             </button>
           </div>
+
         </form>
       </div>
     </div>

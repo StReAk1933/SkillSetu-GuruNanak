@@ -40,8 +40,12 @@ function CompetencyCard({ competency, onInspect, onAddEvidence }) {
     if (isPending) {
       return 'border-amber-200/80 bg-amber-50/30 hover:border-amber-400/80 shadow-xs'
     }
+    if (status === 'rejected') {
+      return 'border-rose-200/80 bg-rose-50/25 hover:border-rose-300 shadow-xs'
+    }
     return 'border-slate-200 bg-slate-50/40 hover:border-slate-300 shadow-xs'
   }
+
 
   return (
     <div
@@ -100,6 +104,15 @@ function CompetencyCard({ competency, onInspect, onAddEvidence }) {
               </span>
               <span className="text-[10px] text-amber-600">{evidence?.date || 'Pending'}</span>
             </div>
+          ) : status === 'rejected' ? (
+            <div className="flex flex-col gap-1 text-rose-800">
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold">
+                ✕ Revision Requested
+              </span>
+              <p className="line-clamp-1 text-[10px] text-rose-700">
+                {evidence?.reviewReason || 'Evidence returned for review'}
+              </p>
+            </div>
           ) : (
             <div className="flex items-center justify-between gap-2 text-slate-500">
               <span className="text-[11px]">No validated proof recorded</span>
@@ -125,10 +138,11 @@ function CompetencyCard({ competency, onInspect, onAddEvidence }) {
             className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-2xs transition hover:bg-slate-50 hover:text-slate-900"
           >
             <FilePlus size={13} className="text-slate-500" />
-            <span>Add Proof</span>
+            <span>{status === 'rejected' ? 'Resubmit Proof' : 'Add Proof'}</span>
           </button>
         )}
       </div>
+
     </div>
   )
 }

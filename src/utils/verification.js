@@ -17,6 +17,7 @@ import { verificationData } from '../data/verificationData'
 export const normalizeVerificationStatus = (status, verified) => {
   if (status === 'verified' || verified === true) return 'verified'
   if (status === 'pending') return 'pending'
+  if (status === 'rejected') return 'rejected'
   return 'unverified'
 }
 
@@ -31,6 +32,7 @@ export const computeEmployeeVerificationMetrics = (employee) => {
       total: 0,
       verifiedCount: 0,
       pendingCount: 0,
+      rejectedCount: 0,
       unverifiedCount: 0,
       verifiedRate: 0,
       averageLevel: 0,
@@ -42,7 +44,8 @@ export const computeEmployeeVerificationMetrics = (employee) => {
   const total = competencies.length
   const verifiedCount = competencies.filter((c) => c.status === 'verified' || c.verified).length
   const pendingCount = competencies.filter((c) => c.status === 'pending').length
-  const unverifiedCount = competencies.filter((c) => c.status === 'unverified' || (!c.verified && c.status !== 'pending')).length
+  const rejectedCount = competencies.filter((c) => c.status === 'rejected').length
+  const unverifiedCount = competencies.filter((c) => c.status === 'unverified' || (!c.verified && c.status !== 'pending' && c.status !== 'rejected')).length
 
   const verifiedRate = total > 0 ? Math.round((verifiedCount / total) * 100) : 0
   const avgLevel = total > 0 ? (competencies.reduce((acc, curr) => acc + (curr.level || 0), 0) / total).toFixed(1) : '0.0'
@@ -59,12 +62,14 @@ export const computeEmployeeVerificationMetrics = (employee) => {
     total,
     verifiedCount,
     pendingCount,
+    rejectedCount,
     unverifiedCount,
     verifiedRate,
     averageLevel: avgLevel,
     trustIndex,
   }
 }
+
 
 /**
  * Computes global workforce verification statistics

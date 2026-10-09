@@ -14,7 +14,7 @@ import {
   Table as TableIcon,
   Users,
 } from 'lucide-react'
-import { verificationData as initialVerificationData } from '../../data/verificationData'
+import { useAppContext } from '../../context/useAppContext'
 import {
   computeEmployeeVerificationMetrics,
   computeGlobalVerificationStats,
@@ -27,9 +27,18 @@ import VerificationFilterBar from './VerificationFilterBar'
 import SubmitEvidenceModal from './SubmitEvidenceModal'
 
 function VerificationDashboard() {
-  // Local state initialized from master verification dataset
-  const [employees, setEmployees] = useState(initialVerificationData)
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState(initialVerificationData[0].employeeId)
+  const {
+    employees,
+    submitEvidence,
+    reviewEvidence,
+    quickVerify,
+    pendingReviews,
+    workspace,
+  } = useAppContext()
+
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState(
+    employees[0]?.id || employees[0]?.employeeId || 'emp-001',
+  )
 
   // Filtering & search state
   const [search, setSearch] = useState('')
@@ -46,7 +55,10 @@ function VerificationDashboard() {
 
   // Current selected employee
   const currentEmployee = useMemo(() => {
-    return employees.find((e) => e.employeeId === selectedEmployeeId) || employees[0]
+    return (
+      employees.find((e) => (e.id || e.employeeId) === selectedEmployeeId) ||
+      employees[0]
+    )
   }, [employees, selectedEmployeeId])
 
   // Computed metrics for current employee
@@ -61,13 +73,15 @@ function VerificationDashboard() {
 
   // Unique categories for the current employee's competencies
   const availableCategories = useMemo(() => {
-    const cats = new Set(currentEmployee.competencies.map((c) => c.category).filter(Boolean))
+    const cats = new Set(
+      currentEmployee?.competencies?.map((c) => c.category).filter(Boolean) || [],
+    )
     return Array.from(cats)
   }, [currentEmployee])
 
   // Filtered competencies for display
   const filteredCompetencies = useMemo(() => {
-    return filterCompetencies(currentEmployee.competencies, {
+    return filterCompetencies(currentEmployee?.competencies || [], {
       status: statusFilter,
       search,
       category: categoryFilter,
@@ -77,82 +91,19 @@ function VerificationDashboard() {
 
   // Status counts for tabs
   const statusCounts = useMemo(() => {
-    const comps = currentEmployee.competencies
+    const comps = currentEmployee?.competencies || []
     return {
       all: comps.length,
       verified: comps.filter((c) => c.status === 'verified' || c.verified).length,
       pending: comps.filter((c) => c.status === 'pending').length,
-      unverified: comps.filter((c) => c.status === 'unverified' || (!c.verified && c.status !== 'pending')).length,
+      rejected: comps.filter((c) => c.status === 'rejected').length,
+      unverified: comps.filter(
+        (c) =>
+          c.status === 'unverified' ||
+          (!c.verified && c.status !== 'pending' && c.status !== 'rejected'),
+      ).length,
     }
   }, [currentEmployee])
-
-  // Handle Quick Verification / Attestation
-  const handleQuickVerify = (competency) => {
-    const updatedEmployees = employees.map((emp) => {
-      if (emp.employeeId === currentEmployee.employeeId) {
-        const updatedComps = emp.competencies.map((comp) => {
-          if (comp.skillId === competency.skillId) {
-            return {
-              ...comp,
-              status: 'verified',
-              verified: true,
-              evidence: {
-                type: comp.evidence?.type !== 'Self reported' ? comp.evidence?.type : 'Manager validation',
-                date: new Date().toISOString().split('T')[0],
-                source: 'SkillSetu Attestation Engine',
-                issuer: 'Workforce Competency Verification Board',
-                credentialId: `ATTEST-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-                validUntil: 'Permanent',
-                verifiedBy: 'Verification Lead',
-                verificationScore: 94,
-                summary: `Formal verification signed and recorded for ${comp.skill} (Level ${comp.level}).`,
-                artifacts: [],
-                auditTrail: [
-                  ...(comp.evidence?.auditTrail || []),
-                  {
-                    date: `${new Date().toISOString().split('T')[0]} ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
-                    action: 'Attestation Signed & Verified',
-                    actor: 'Verification Lead',
-                  },
-                ],
-              },
-            }
-          }
-          return comp
-        })
-        return { ...emp, competencies: updatedComps }
-      }
-      return emp
-    })
-
-    setEmployees(updatedEmployees)
-    setActiveCompetency(null)
-    triggerToast(`✓ Verified ${competency.skill} for ${currentEmployee.employeeName}`)
-  }
-
-  // Handle Evidence Submission
-  const handleSubmitEvidence = (skillId, newEvidence) => {
-    const updatedEmployees = employees.map((emp) => {
-      if (emp.employeeId === currentEmployee.employeeId) {
-        const updatedComps = emp.competencies.map((comp) => {
-          if (comp.skillId === skillId) {
-            return {
-              ...comp,
-              status: 'verified',
-              verified: true,
-              evidence: newEvidence,
-            }
-          }
-          return comp
-        })
-        return { ...emp, competencies: updatedComps }
-      }
-      return emp
-    })
-
-    setEmployees(updatedEmployees)
-    triggerToast(`Evidence recorded and verified for ${skillId}!`)
-  }
 
   const triggerToast = (msg) => {
     setNotification(msg)
@@ -160,6 +111,54 @@ function VerificationDashboard() {
       setNotification(null)
     }, 4000)
   }
+
+  // Handle Quick Verification / Attestation
+  const handleQuickVerify = (competency) => {
+    quickVerify({
+      employeeId: currentEmployee.id || currentEmployee.employeeId,
+      skillId: competency.skillId,
+      reviewerName: 'Verification Lead',
+    })
+    setActiveCompetency(null)
+    triggerToast(`✓ Attested & verified ${competency.skill} for ${currentEmployee.name || currentEmployee.employeeName}`)
+  }
+
+  // Handle Evidence Submission
+  const handleSubmitEvidence = (skillId, newEvidence) => {
+    submitEvidence({
+      employeeId: currentEmployee.id || currentEmployee.employeeId,
+      skillId,
+      evidenceData: newEvidence,
+    })
+    triggerToast(`Evidence submitted for review for ${skillId}! Waiting for reviewer approval.`)
+  }
+
+  // Handle Reviewer Approval
+  const handleApprove = (competency) => {
+    reviewEvidence({
+      employeeId: currentEmployee.id || currentEmployee.employeeId,
+      skillId: competency.skillId,
+      decision: 'approve',
+      reason: 'Approved by Verification Reviewer',
+      reviewerName: 'Verification Lead',
+    })
+    setActiveCompetency(null)
+    triggerToast(`✓ Approved & verified ${competency.skill}! Matching scores updated.`)
+  }
+
+  // Handle Reviewer Rejection
+  const handleReject = (competency, reason) => {
+    reviewEvidence({
+      employeeId: currentEmployee.id || currentEmployee.employeeId,
+      skillId: competency.skillId,
+      decision: 'reject',
+      reason: reason || 'Evidence returned for revision.',
+      reviewerName: 'Verification Lead',
+    })
+    setActiveCompetency(null)
+    triggerToast(`Evidence for ${competency.skill} returned for revision.`)
+  }
+
 
   return (
     <div className="space-y-6">
@@ -267,6 +266,123 @@ function VerificationDashboard() {
         </div>
       </div>
 
+      {/* Pending Reviewer Queue (when items are pending) */}
+      {pendingReviews.length > 0 && (
+        <section className="rounded-2xl border border-amber-300 bg-amber-50/70 p-5 shadow-xs">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-amber-800">
+                <Clock size={17} className="animate-pulse" />
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-amber-700">
+                  Reviewer Action Required
+                </span>
+              </div>
+              <h3 className="mt-1 text-base font-extrabold text-slate-950">
+                Pending Verification Queue ({pendingReviews.length} submission{pendingReviews.length > 1 ? 's' : ''})
+              </h3>
+              <p className="mt-0.5 text-xs text-amber-900/80">
+                Inspect evidence proofs and explicitly approve or reject before competencies are verified in matching.
+              </p>
+            </div>
+            <span className="self-start rounded-full bg-amber-200/80 px-2.5 py-1 text-[11px] font-black text-amber-900 sm:self-center">
+              {pendingReviews.length} in queue
+            </span>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {pendingReviews.map((item) => (
+              <div
+                key={`${item.employeeId}-${item.competency.skillId}`}
+                className="flex flex-col justify-between rounded-xl border border-amber-200 bg-white p-4 shadow-2xs"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <span className="grid size-8 place-items-center rounded-lg bg-slate-900 text-xs font-bold text-white">
+                        {item.avatar}
+                      </span>
+                      <div>
+                        <p className="text-xs font-bold text-slate-900">{item.employeeName}</p>
+                        <p className="text-[10px] text-slate-500">{item.role}</p>
+                      </div>
+                    </div>
+                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold text-amber-800">
+                      Pending Review
+                    </span>
+                  </div>
+
+                  <div className="mt-3 rounded-lg bg-slate-50 p-2.5 text-xs">
+                    <div className="flex items-center justify-between">
+                      <p className="font-extrabold text-slate-900">
+                        {item.competency.skill} <span className="text-slate-400 font-normal">Level {item.competency.level}</span>
+                      </p>
+                      <span className="text-[10px] font-mono text-slate-400">{item.evidence?.date}</span>
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-[11px] text-slate-600">
+                      {item.evidence?.summary || 'Proof submitted for review.'}
+                    </p>
+                    <p className="mt-1.5 text-[10px] text-slate-400">
+                      Source: <strong className="text-slate-600">{item.evidence?.source || item.evidence?.type}</strong>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex items-center justify-end gap-2 border-t border-slate-100 pt-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedEmployeeId(item.employeeId)
+                      setActiveCompetency(item.competency)
+                    }}
+                    className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                  >
+                    Inspect Dossier
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      reviewEvidence({
+                        employeeId: item.employeeId,
+                        skillId: item.competency.skillId,
+                        decision: 'approve',
+                        reason: 'Approved via Review Queue',
+                        reviewerName: 'Verification Lead',
+                      })
+                      triggerToast(`✓ Approved ${item.competency.skill} for ${item.employeeName}!`)
+                    }}
+                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 shadow-2xs"
+                  >
+                    Approve ✓
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const reason = window.prompt(
+                        `Rejection reason for ${item.employeeName}'s ${item.competency.skill}:`,
+                        'Evidence lacks adequate implementation detail or credential verification',
+                      )
+                      if (reason) {
+                        reviewEvidence({
+                          employeeId: item.employeeId,
+                          skillId: item.competency.skillId,
+                          decision: 'reject',
+                          reason,
+                          reviewerName: 'Verification Lead',
+                        })
+                        triggerToast(`Returned ${item.competency.skill} for revision.`)
+                      }
+                    }}
+                    className="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-100"
+                  >
+                    Reject ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Employee Selector Bar */}
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
         <div className="mb-3 flex items-center justify-between">
@@ -281,13 +397,15 @@ function VerificationDashboard() {
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
           {employees.map((emp) => {
-            const isSelected = emp.employeeId === selectedEmployeeId
+            const empId = emp.id || emp.employeeId
+            const empName = emp.name || emp.employeeName
+            const isSelected = empId === selectedEmployeeId
             const empMetrics = computeEmployeeVerificationMetrics(emp)
             return (
               <button
-                key={emp.employeeId}
+                key={empId}
                 onClick={() => {
-                  setSelectedEmployeeId(emp.employeeId)
+                  setSelectedEmployeeId(empId)
                   setStatusFilter('all')
                   setSearch('')
                 }}
@@ -303,7 +421,7 @@ function VerificationDashboard() {
                       isSelected ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-white'
                     }`}
                   >
-                    {emp.avatar || emp.employeeName.substring(0, 2).toUpperCase()}
+                    {emp.avatar || empName.substring(0, 2).toUpperCase()}
                   </span>
                   <span
                     className={`text-[10px] font-bold ${
@@ -317,7 +435,7 @@ function VerificationDashboard() {
                     {empMetrics.verifiedRate}%
                   </span>
                 </div>
-                <p className="mt-2 text-xs font-bold text-slate-900 truncate w-full">{emp.employeeName}</p>
+                <p className="mt-2 text-xs font-bold text-slate-900 truncate w-full">{empName}</p>
                 <p className="text-[10px] text-slate-500 truncate w-full">{emp.role}</p>
               </button>
             )
@@ -325,19 +443,21 @@ function VerificationDashboard() {
         </div>
       </section>
 
+
       {/* Selected Employee Profile Hero Banner */}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
         <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
           <div className="flex items-start gap-4">
             <div className="grid size-16 shrink-0 place-items-center rounded-2xl bg-slate-900 text-2xl font-black text-white shadow-md">
-              {currentEmployee.avatar || currentEmployee.employeeName.substring(0, 2).toUpperCase()}
+              {currentEmployee.avatar || (currentEmployee.name || currentEmployee.employeeName || 'EM').substring(0, 2).toUpperCase()}
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-xl font-black text-slate-950">{currentEmployee.employeeName}</h2>
+                <h2 className="text-xl font-black text-slate-950">{currentEmployee.name || currentEmployee.employeeName}</h2>
                 <span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-[10px] font-bold text-slate-600">
-                  {currentEmployee.employeeId}
+                  {currentEmployee.id || currentEmployee.employeeId}
                 </span>
+
                 <VerificationBadge
                   verified={employeeMetrics.verifiedCount === employeeMetrics.total}
                   compact={false}
@@ -554,8 +674,17 @@ function VerificationDashboard() {
           employee={currentEmployee}
           onClose={() => setActiveCompetency(null)}
           onQuickVerify={handleQuickVerify}
+          onApprove={handleApprove}
+          onReject={handleReject}
+          onAddEvidence={(comp) => {
+            setEvidenceModalTarget(comp)
+            setIsEvidenceModalOpen(true)
+            setActiveCompetency(null)
+          }}
+          isReviewer={workspace === 'admin'}
         />
       )}
+
 
       {/* Submit Evidence Modal */}
       {isEvidenceModalOpen && (
