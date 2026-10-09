@@ -11,7 +11,11 @@ const navigation = [
   { label: 'Impact', icon: BarChart3 },
 ]
 
-function AppShell({ children, activeTab = 'Verification', onTabChange, workspace = 'admin', onWorkspaceChange }) {
+function AppShell({ children, activeTab = 'Verification', onTabChange, workspace = 'admin', onWorkspaceChange, user, onLogout }) {
+  const visibleNav = workspace === 'employee'
+    ? navigation.filter((item) => item.label !== 'Simulation' && item.label !== 'Impact')
+    : navigation
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 lg:flex">
       <aside className="hidden w-64 shrink-0 flex-col border-r border-slate-200 bg-white lg:flex">
@@ -24,7 +28,7 @@ function AppShell({ children, activeTab = 'Verification', onTabChange, workspace
         </div>
         <nav className="flex-1 space-y-1 px-3 py-6">
           <p className="px-3 pb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Workspace</p>
-          {navigation.map(({ label, icon: Icon }) => {
+          {visibleNav.map(({ label, icon: Icon }) => {
   const isActive = activeTab === label
   return (
     <button
@@ -54,7 +58,7 @@ function AppShell({ children, activeTab = 'Verification', onTabChange, workspace
       </aside>
       <div className="min-w-0 flex-1">
         <div className="relative z-40">
-          <Header workspace={workspace} onWorkspaceChange={onWorkspaceChange} />
+          <Header workspace={workspace} onWorkspaceChange={onWorkspaceChange} user={user} onLogout={onLogout} />
         </div>
         <main className="p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
