@@ -186,7 +186,6 @@ export default function WorkforceModulesPage({ type = 'Dashboard' }) {
           <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl">{title}</h1>
           <p className="mt-3 text-base leading-7 text-slate-500">{description}</p>
         </div>
-        <div className="rounded-2xl bg-slate-900 px-5 py-4 text-white"><p className="text-[10px] font-bold uppercase tracking-widest text-emerald-300">Data layer</p><p className="mt-1 font-bold">Demo / Mock • Live UI</p></div>
       </div>
     </section>
     {body}

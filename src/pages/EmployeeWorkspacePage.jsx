@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import {
   ArrowUpRight,
   BadgeCheck,
@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   CircleAlert,
   Clock3,
-  Play,
   Sparkles,
   Target,
   TrendingUp,
@@ -108,15 +107,11 @@ function SkillGapCard({ competencies = [] }) {
   )
 }
 
-function LearningCard({ employee, learningPaths, learningRecords, onStartLearning }) {
-  const [started, setStarted] = useState(false)
-  const empRecords = learningRecords[employee?.id] || {}
+function LearningCard({ learningPaths, onStartLearning }) {
   const targetPath = learningPaths[0]
-  const record = empRecords[targetPath?.id] || { progress: 0 }
 
   const handleStart = () => {
-    setStarted(true)
-    onStartLearning?.(targetPath.id)
+    if (targetPath) onStartLearning?.(targetPath)
   }
 
   return (
@@ -145,9 +140,9 @@ function LearningCard({ employee, learningPaths, learningRecords, onStartLearnin
             onClick={handleStart}
             className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-400 cursor-pointer shadow-sm"
           >
-            {started || record.progress > 0 ? <CheckCircle2 size={16} /> : <Play size={16} />}
+            <ArrowUpRight size={16} />
             <span>
-              {record.progress > 0 ? `Continue Learning (${record.progress}%)` : 'Start Learning'}
+              Explore on SWAYAM
             </span>
           </button>
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400">
@@ -316,7 +311,7 @@ function RecommendedWork({ employee, projects = [] }) {
 }
 
 function EmployeeWorkspacePage() {
-  const { currentEmployee, projects, learningPaths, learningRecords, updateLearningProgress } = useAppContext()
+  const { currentEmployee, projects, learningPaths } = useAppContext()
 
   const comps = currentEmployee?.competencies || []
   const verifiedCount = comps.filter((c) => c.status === 'verified' || c.verified).length
@@ -393,16 +388,12 @@ function EmployeeWorkspacePage() {
       <div className="grid gap-6 xl:grid-cols-[1.05fr_.95fr]">
         <SkillGapCard competencies={comps} />
         <LearningCard
-          employee={currentEmployee}
-          learningPaths={learningPaths}
-          learningRecords={learningRecords}
-          onStartLearning={(pathId) =>
-            updateLearningProgress({
-              employeeId: currentEmployee.id,
-              pathId,
-              progressDelta: 25,
-            })
-          }
+        learningPaths={learningPaths}
+        onStartLearning={(path) => {
+            const query = path.swayamSearchTerm || `${path.skillName} NPTEL`
+            const url = `https://swayam.gov.in/explorer?searchText=${encodeURIComponent(query)}`
+            window.open(url, '_blank', 'noopener,noreferrer')
+          }}
         />
       </div>
 
