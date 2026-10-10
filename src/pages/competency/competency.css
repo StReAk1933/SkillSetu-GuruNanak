@@ -35,9 +35,9 @@
 *, *::before, *::after { box-sizing: border-box; }
 
 :root {
-  --bg-primary: #05051a;
-  --bg-secondary: #0a0a2e;
-  --bg-card: rgba(15, 15, 50, 0.6);
+  --bg-primary: #0b132d;
+  --bg-secondary: #101d3a;
+  --bg-card: rgba(15, 23, 42, 0.8);
   --border-glass: rgba(139, 92, 246, 0.15);
   --glow-purple: rgba(139, 92, 246, 0.5);
   --glow-cyan: rgba(34, 211, 238, 0.5);
@@ -130,7 +130,7 @@ body {
 
 /* ─── Animated Background ────────────────────────── */
 .animated-bg {
-  background: #F8FAFC;
+  background: #0b132d;
 }
 
 /* ─── Shimmer ────────────────────────────────────── */
